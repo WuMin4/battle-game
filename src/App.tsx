@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Peer from 'peerjs';
 import { ALL_CARDS, BASE_CARDS, SKILL_CARDS, getCardById } from './cards';
 import { resolveTurn } from './engine';
-import { Shield, Zap, Heart, Sword, FastForward } from 'lucide-react';
+import { Shield, Zap, Heart, Sword, FastForward, HelpCircle, X } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -39,6 +39,8 @@ function App() {
   const [peerId, setPeerId] = useState('');
   const [joinId, setJoinId] = useState('');
   const [peerError, setPeerError] = useState('');
+  const [showTutorial, setShowTutorial] = useState(false);
+  
   const peerRef = useRef(null);
   const connRef = useRef(null);
 
@@ -435,8 +437,13 @@ function App() {
               </button>
             </div>
             {peerError && <p className="text-red-500 text-sm text-center">{peerError}</p>}
+            
+            <button onClick={() => setShowTutorial(true)} className="w-full mt-2 py-3 text-neutral-400 hover:text-orange-400 flex items-center justify-center gap-2 transition font-bold rounded-xl hover:bg-neutral-800">
+              <HelpCircle size={18} /> 查看游戏教程
+            </button>
           </div>
         </div>
+        {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
       </div>
     );
   }
@@ -479,7 +486,12 @@ function App() {
       <header className="p-4 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center shadow-md">
          <div className="text-sm font-mono text-neutral-500">房间: {gameState.roomId}</div>
          <div className="text-lg font-bold">回合 {gameState.turn}</div>
-         <div className="text-sm text-orange-400">你的胜场: {p1.wins} | 对方胜场: {p2.wins}</div>
+         <div className="flex items-center gap-4">
+           <div className="text-sm text-orange-400">你的胜场: {p1.wins} | 对方胜场: {p2.wins}</div>
+           <button onClick={() => setShowTutorial(true)} className="text-neutral-400 hover:text-white transition" title="游戏教程">
+             <HelpCircle size={22} />
+           </button>
+         </div>
       </header>
 
       {/* Opponent Locked Banner */}
@@ -611,6 +623,7 @@ function App() {
            </div>
         </div>
       </div>
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </div>
   );
 }
@@ -691,6 +704,65 @@ function SkillSelectPhase({ onSelect, pool, required, title }) {
       >
         确认选择
       </button>
+    </div>
+  );
+}
+
+function TutorialModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-slide-up">
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950">
+          <h2 className="text-xl font-bold text-orange-400 flex items-center gap-2"><HelpCircle size={20}/> 游戏教程</h2>
+          <button onClick={onClose} className="text-neutral-500 hover:text-red-500 transition"><X size={24}/></button>
+        </div>
+        <div className="p-6 overflow-y-auto text-neutral-300 space-y-6 leading-relaxed text-sm sm:text-base">
+          
+          <section>
+            <h3 className="text-lg font-bold text-white mb-2">一、 游戏目标</h3>
+            <p>合理分配能量，猜测对方意图，率先将对方的生命值降至零即可获胜。</p>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-bold text-white mb-2">二、 游戏流程</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong className="text-orange-400">开局选择：</strong>系统随机提供两张技能牌，你需选择一张作为本局专属技能。</li>
+              <li><strong className="text-orange-400">战斗阶段：</strong>双方初始拥有3点生命与1点能量。每回合双方同时暗出卡牌。</li>
+              <li><strong className="text-orange-400">回合结算：</strong>卡牌同时亮出并结算，直至一方倒下。</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-bold text-white mb-2">三、 卡牌限制与分类</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong className="text-orange-400">出牌限制：</strong>除“回能”外，任何打出的牌在下一回合都会进入冷却（禁止连续两回合使用同一张牌）。</li>
+              <li><strong className="text-purple-400">被动技能：</strong>满足条件自动生效。</li>
+              <li><strong className="text-red-400">一次性技能：</strong>整局仅限使用一次，用完永久封印。</li>
+              <li><strong className="text-blue-400">非一次性技能：</strong>冷却完毕后可多次使用。</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-bold text-white mb-2">四、 进阶与隐藏机制</h3>
+            <div className="space-y-3 bg-neutral-800/50 p-4 rounded-lg border border-neutral-700">
+              <p><strong className="text-orange-400">1. 能量优先扣除：</strong>能量消耗在所有效果前结算。若你的牌被对手“无效化”，已支付的能量<span className="text-red-400 font-bold">不会退还</span>。</p>
+              <p><strong className="text-orange-400">2. 无效化与封印优先级：</strong></p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>明牌：</strong>全游戏最高优先级。必定无效对手的牌，并强制对手下回合免费打出该牌。</li>
+                <li><strong>终·无懈可击：</strong>不仅无效，还会将该牌<span className="text-red-400 font-bold">永久封印</span>（但“回能”永远无法被永久封印）。</li>
+              </ul>
+              <p><strong className="text-orange-400">3. 反转的碰撞：</strong></p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>双方同时打出“反转”会互相抵消，白白浪费能量。</li>
+                <li>“反转”只能窃取攻防疗等效果，<span className="text-red-400 font-bold">无法窃取回能效果</span>。</li>
+              </ul>
+              <p><strong className="text-orange-400">4. 伤害结算顺序：</strong>受到伤害时，防御手段触发顺序为：<strong>无敌 ➔ 反弹 ➔ 格挡</strong>（反弹会先减免3点，不足则反弹差值）。</p>
+              <p><strong className="text-orange-400">5. 濒死结算：</strong>伤害和治疗全部计算完毕后，才判定是否死亡。若有“绝地反击”或满血复活被动，即使中途生命降至零以下，只要回合结束时触发被动即可存活。</p>
+            </div>
+          </section>
+
+        </div>
+      </div>
     </div>
   );
 }
